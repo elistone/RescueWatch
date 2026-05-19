@@ -4,6 +4,8 @@
 [ext_resource type="Texture2D" uid="uid://ddenyhvmyprxm" path="res://resources/zone_tiles.png" id="1_l3cfh"]
 [ext_resource type="Script" uid="uid://4hv33do63ugm" path="res://scripts/core/tilemap_bridge.gd" id="2_6q06x"]
 [ext_resource type="PackedScene" uid="uid://20pnlgs12q5d" path="res://scenes/npc/swimmer.tscn" id="2_iuonh"]
+[ext_resource type="Script" uid="uid://b1pqwmthfk7xx" path="res://scripts/systems/swimmer_spawner.gd" id="4_6q06x"]
+[ext_resource type="Script" uid="uid://dkcy3oyiljiae" path="res://scenes/main/shift_ui.gd" id="6_ow5a4"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_l3cfh"]
 texture = ExtResource("1_l3cfh")
@@ -39,12 +41,35 @@ position = Vector2(640, 360)
 
 [node name="GridVisualizer" parent="." unique_id=799753535 instance=ExtResource("1_hyk8p")]
 
-[node name="Swimmer" parent="." unique_id=1939116032 instance=ExtResource("2_iuonh")]
+[node name="SwimmerSpawner" type="Node" parent="." unique_id=746094056 groups=["spawner"]]
+script = ExtResource("4_6q06x")
+swimmer_scene = ExtResource("2_iuonh")
 
-[node name="Swimmer2" parent="." unique_id=547479438 instance=ExtResource("2_iuonh")]
+[node name="ShiftUI" type="Control" parent="." unique_id=1783797292]
+z_index = 5
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("6_ow5a4")
 
-[node name="Swimmer3" parent="." unique_id=972388792 instance=ExtResource("2_iuonh")]
+[node name="TimeLabel" type="Label" parent="ShiftUI" unique_id=848212298]
+layout_mode = 0
+offset_left = 1220.0
+offset_top = 10.0
+offset_right = 1262.0
+offset_bottom = 33.0
+text = "00:00"
 
-[node name="Swimmer4" parent="." unique_id=2051986421 instance=ExtResource("2_iuonh")]
+[node name="ProgressBar" type="ProgressBar" parent="ShiftUI" unique_id=2122475032]
+layout_mode = 0
+offset_right = 4.0
+offset_bottom = 27.0
 
-[node name="Swimmer5" parent="." unique_id=2096960393 instance=ExtResource("2_iuonh")]
+[node name="CountLabel" type="Label" parent="ShiftUI" unique_id=1150423996]
+layout_mode = 0
+offset_left = 598.0
+offset_top = 12.0
+offset_right = 638.0
+offset_bottom = 35.0
+text = "start"
