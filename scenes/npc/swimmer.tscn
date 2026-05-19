@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://20pnlgs12q5d"]
 
-[ext_resource type="Script" uid="uid://dhhm2jyhsk8bc" path="res://scenes/npc/swimmer.gd" id="1_ny6fo"]
+[ext_resource type="Script" uid="uid://dhhm2jyhsk8bc" path="res://scripts/npc/swimmer.gd" id="1_ny6fo"]
 
 [node name="Swimmer" type="Node2D" unique_id=1939116032]
 script = ExtResource("1_ny6fo")
