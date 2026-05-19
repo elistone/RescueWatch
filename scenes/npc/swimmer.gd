@@ -7,14 +7,10 @@ Swimmer NPC - Grid-based beach visitor.
 Features:
 - Grid-based pathfinding
 - Smooth cell-to-cell movement
+- Collision avoidance (waits for blocked cells AND nearby swimmers)
+- Squeeze-past mechanism when stuck
 - Simple state machine
 - Activity lifecycle
-
-States:
-- SPAWNING: Just created, planning activities
-- MOVING: Walking/swimming to target cell
-- ACTIVITY: Doing something (sunbathing, swimming)
-- LEAVING: Exiting the beach
 """
 
 
@@ -45,6 +41,12 @@ var path_index: int = 0
 var move_speed: float = 100.0  # Pixels per second
 var arrival_threshold: float = 5.0
 
+# Collision avoidance
+var is_waiting: bool = false
+var wait_timer: float = 0.0
+var max_wait_time: float = 2.0  # Wait 2 seconds before trying to squeeze past
+var squeeze_past_speed: float = 30.0  # Slower speed when squeezing past
+
 
 # -------------------------------------------------------------------
 # Activity
@@ -68,6 +70,9 @@ var activity_duration: float = 0.0
 
 func _ready():
 	print("[Swimmer] Created at position: %s" % position)
+	
+	# Add to swimmers group for collision detection
+	add_to_group("swimmers")
 	
 	# Start at a random entrance cell
 	spawn_at_entrance()
@@ -105,7 +110,7 @@ func process_spawning(_delta):
 
 
 func process_moving(delta):
-	"""Moving along path to target cell"""
+	"""Moving along path to target cell with collision avoidance"""
 	if path.is_empty():
 		print("[Swimmer] No path - arriving at destination")
 		arrive_at_target()
@@ -114,7 +119,57 @@ func process_moving(delta):
 	# Get current waypoint
 	var waypoint = path[path_index]
 	
-	# Move toward waypoint
+	# Check if next waypoint cell is available
+	var next_cell = GridManager.get_cell_at_world(waypoint)
+	
+	if next_cell and !GridManager.is_cell_available_for(next_cell, self):
+		# Cell is blocked by occupancy, wait
+		if !is_waiting:
+			print("[Swimmer] Path blocked at (%d, %d), waiting..." % [next_cell.grid_x, next_cell.grid_y])
+			is_waiting = true
+			wait_timer = 0.0
+			body.color = Color.GRAY  # Visual feedback: gray = waiting
+		
+		wait_timer += delta
+		
+		# If waited too long, try to find alternative path
+		if wait_timer > max_wait_time * 1.5:  # Wait longer for cell occupancy
+			print("[Swimmer] Waited too long, finding alternative route...")
+			recalculate_path()
+			is_waiting = false
+			wait_timer = 0.0
+		
+		return  # Don't move while waiting
+	
+	# Check physical distance to other swimmers
+	var blocking_swimmer = get_closest_blocking_swimmer()
+	
+	if blocking_swimmer != null:
+		# Too close to another swimmer
+		if !is_waiting:
+			print("[Swimmer] Too close to another swimmer, waiting...")
+			is_waiting = true
+			wait_timer = 0.0
+			body.color = Color.GRAY
+		
+		wait_timer += delta
+		
+		# After waiting a bit, try to squeeze past slowly
+		if wait_timer > max_wait_time:
+			print("[Swimmer] Squeezing past...")
+			squeeze_past_swimmer(blocking_swimmer, waypoint, delta)
+			return
+		
+		return  # Don't move while too close and haven't waited long enough
+	
+	# Path is clear, stop waiting
+	if is_waiting:
+		print("[Swimmer] Path clear, resuming movement")
+		is_waiting = false
+		wait_timer = 0.0
+		restore_color()
+	
+	# Move toward waypoint at normal speed
 	var direction = (waypoint - position).normalized()
 	var distance = position.distance_to(waypoint)
 	
@@ -264,6 +319,30 @@ func move_to_cell(cell: GridManager.GridCell):
 		print("[Swimmer] Could not claim cell (%d, %d) - already occupied!" % [target_cell.grid_x, target_cell.grid_y])
 
 
+func recalculate_path():
+	"""Recalculates path to target cell"""
+	if target_cell == null:
+		print("[Swimmer] No target to recalculate path to")
+		return
+	
+	print("[Swimmer] Recalculating path to (%d, %d)" % [target_cell.grid_x, target_cell.grid_y])
+	
+	# Calculate new path from current position
+	var new_path = GridManager.find_path(position, target_cell.world_position)
+	
+	if new_path.is_empty():
+		print("[Swimmer] No alternative path found, giving up")
+		# Give up and leave
+		plan_exit()
+	else:
+		print("[Swimmer] New path found with %d waypoints" % new_path.size())
+		path = new_path
+		path_index = 0
+		is_waiting = false
+		wait_timer = 0.0
+		restore_color()
+
+
 func arrive_at_target():
 	"""Called when swimmer reaches target cell"""
 	print("[Swimmer] Arrived at target cell")
@@ -343,12 +422,94 @@ func finish_activity():
 
 
 # -------------------------------------------------------------------
+# Collision Avoidance Helpers
+# -------------------------------------------------------------------
+
+func get_closest_blocking_swimmer() -> Swimmer:
+	"""Returns the closest swimmer that's blocking this one, or null"""
+	var min_distance = 64.0  # Minimum distance between swimmers (cell size)
+	var closest: Swimmer = null
+	var closest_dist = min_distance
+	
+	# Get all swimmers in the scene
+	var swimmers = get_tree().get_nodes_in_group("swimmers")
+	
+	for other in swimmers:
+		if other == self:
+			continue  # Skip self
+		
+		if other is Swimmer:
+			var distance = position.distance_to(other.position)
+			if distance < min_distance:
+				if closest == null or distance < closest_dist:
+					closest = other
+					closest_dist = distance
+	
+	return closest
+
+
+func squeeze_past_swimmer(other: Swimmer, goal: Vector2, delta: float):
+	"""Slowly squeeze past a blocking swimmer"""
+	body.color = Color.YELLOW  # Visual feedback: yellow = squeezing past
+	
+	# Calculate perpendicular direction to move around the other swimmer
+	var to_goal = (goal - position).normalized()
+	var to_other = (other.position - position).normalized()
+	
+	# Get perpendicular vector (rotate 90 degrees)
+	var perpendicular = Vector2(-to_other.y, to_other.x)
+	
+	# Decide which direction to go around (choose the one closer to goal)
+	var option1 = position + perpendicular * 20
+	var option2 = position - perpendicular * 20
+	
+	var direction: Vector2
+	if option1.distance_to(goal) < option2.distance_to(goal):
+		direction = perpendicular
+	else:
+		direction = -perpendicular
+	
+	# Also add some forward momentum toward goal
+	direction = (direction * 0.7 + to_goal * 0.3).normalized()
+	
+	# Move slowly in that direction
+	position += direction * squeeze_past_speed * delta
+	
+	# Check if we're far enough away now
+	if position.distance_to(other.position) > 70.0:
+		print("[Swimmer] Squeezed past successfully")
+		is_waiting = false
+		wait_timer = 0.0
+		restore_color()
+
+
+# -------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------
+
+func restore_color():
+	"""Restores color based on current activity/state"""
+	if current_state == State.ACTIVITY:
+		# Keep activity color
+		return
+	
+	# Default moving color
+	body.color = Color.CYAN
+
+
+# -------------------------------------------------------------------
 # Debug
 # -------------------------------------------------------------------
 
 func update_debug_label():
 	"""Updates debug label"""
 	var text = get_state_name(current_state)
+	
+	if is_waiting:
+		if body.color == Color.YELLOW:
+			text += " (SQUEEZE)"
+		else:
+			text += " (WAIT)"
 	
 	if current_cell:
 		text += "\n(%d,%d)" % [current_cell.grid_x, current_cell.grid_y]

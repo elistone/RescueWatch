@@ -104,6 +104,8 @@ func determine_cell_type(x: int, y: int) -> CellType:
 		return CellType.SHALLOW
 	else:
 		return CellType.DEEP
+
+
 # -------------------------------------------------------------------
 # Grid Queries
 # -------------------------------------------------------------------
@@ -192,7 +194,29 @@ func find_random_cell_of_type(type: CellType) -> GridCell:
 
 
 # -------------------------------------------------------------------
-# Pathfinding (Simple A* - will implement in next step)
+# Collision Avoidance
+# -------------------------------------------------------------------
+
+func is_cell_available_for(cell: GridCell, requester: Node) -> bool:
+	"""Checks if a cell is available for an NPC to enter"""
+	if cell == null:
+		return false
+	
+	if !cell.walkable:
+		return false
+	
+	# Cell is available if not occupied, or if occupied by the requester
+	if !cell.occupied:
+		return true
+	
+	if cell.occupant == requester:
+		return true
+	
+	return false
+
+
+# -------------------------------------------------------------------
+# Pathfinding
 # -------------------------------------------------------------------
 
 func find_path(start_world: Vector2, goal_world: Vector2) -> Array[Vector2]:
