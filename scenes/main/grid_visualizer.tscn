@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://banhjdttvlhhx"]
+
+[ext_resource type="Script" uid="uid://bfovu2jyyldhk" path="res://scenes/main/grid_visualizer.gd" id="1_hdcym"]
+
+[node name="GridVisualizer" type="Node2D" unique_id=799753535]
+script = ExtResource("1_hdcym")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1617960757]
+
+[node name="Control" type="Control" parent="CanvasLayer" unique_id=1373750420]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CellInfoLabel" type="Label" parent="CanvasLayer/Control" unique_id=931047941]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 310.0
+offset_bottom = 160.0
+text = "Tap a cell for info"
+
+[node name="ToggleGridButton" type="Button" parent="CanvasLayer/Control" unique_id=1014017802]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 600.0
+offset_right = 160.0
+offset_bottom = 650.0
+text = "Toggle Grid (F1)"
+
+[connection signal="pressed" from="CanvasLayer/Control/ToggleGridButton" to="." method="_on_toggle_grid_button_pressed"]

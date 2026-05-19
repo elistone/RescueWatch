@@ -1,0 +1,53 @@
+[gd_scene format=3 uid="uid://7p5eixl1usgo"]
+
+[ext_resource type="PackedScene" uid="uid://banhjdttvlhhx" path="res://scenes/main/grid_visualizer.tscn" id="1_hyk8p"]
+[ext_resource type="PackedScene" uid="uid://20pnlgs12q5d" path="res://scenes/npc/swimmer.tscn" id="2_iuonh"]
+
+[node name="Main" type="Node2D" unique_id=347758180]
+
+[node name="Background" type="ColorRect" parent="." unique_id=1632906904]
+z_index = -10
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.5294118, 0.8117647, 0.98039216, 1)
+
+[node name="Entrance" type="ColorRect" parent="." unique_id=163528134]
+z_index = -9
+offset_right = 1280.0
+offset_bottom = 160.0
+color = Color(0.8509804, 0.8509804, 0.8509804, 1)
+
+[node name="Beach" type="ColorRect" parent="." unique_id=1892361415]
+z_index = -9
+offset_top = 160.0
+offset_right = 1280.0
+offset_bottom = 400.0
+color = Color(0.9607843, 0.87058824, 0.7019608, 1)
+
+[node name="ShallowWater" type="ColorRect" parent="." unique_id=137976006]
+z_index = -9
+offset_top = 400.0
+offset_right = 1280.0
+offset_bottom = 560.0
+color = Color(0.61960787, 0.92941177, 0.9411765, 1)
+
+[node name="DeepWater" type="ColorRect" parent="." unique_id=433957003]
+offset_top = 560.0
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.2509804, 0.5294118, 0.81960785, 1)
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1134066701]
+position = Vector2(640, 360)
+
+[node name="GridVisualizer" parent="." unique_id=799753535 instance=ExtResource("1_hyk8p")]
+
+[node name="Swimmer" parent="." unique_id=1939116032 instance=ExtResource("2_iuonh")]
+
+[node name="Swimmer2" parent="." unique_id=547479438 instance=ExtResource("2_iuonh")]
+
+[node name="Swimmer3" parent="." unique_id=972388792 instance=ExtResource("2_iuonh")]
+
+[node name="Swimmer4" parent="." unique_id=2051986421 instance=ExtResource("2_iuonh")]
+
+[node name="Swimmer5" parent="." unique_id=2096960393 instance=ExtResource("2_iuonh")]

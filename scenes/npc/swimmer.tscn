@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://20pnlgs12q5d"]
+
+[ext_resource type="Script" uid="uid://dhhm2jyhsk8bc" path="res://scenes/npc/swimmer.gd" id="1_ny6fo"]
+
+[node name="Swimmer" type="Node2D" unique_id=1939116032]
+script = ExtResource("1_ny6fo")
+
+[node name="Body" type="ColorRect" parent="." unique_id=671858664]
+offset_left = -24.0
+offset_top = -24.0
+offset_right = 24.0
+offset_bottom = 24.0
+color = Color(1, 0.85882354, 0.6745098, 1)
+
+[node name="DebugLabel" type="Label" parent="." unique_id=1463258259]
+offset_top = -40.0
+offset_right = 73.0
+offset_bottom = -17.0
+theme_override_font_sizes/font_size = 10
+text = "Swimmer"
+horizontal_alignment = 1
