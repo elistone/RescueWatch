@@ -1,10 +1,15 @@
 class_name SwimmerStateMoving
 extends NPCState
 
-## Follows path cell-to-cell. On arrival, asks swimmer what's next.
+## Follows path cell-to-cell with personality-driven pauses.
 
 var _repath_attempts: int = 0
 const MAX_REPATH_ATTEMPTS := 3
+
+# Pause between steps
+var _pausing: bool = false
+var _pause_timer: float = 0.0
+var _pause_duration: float = 0.0
 
 
 func enter() -> void:
@@ -12,16 +17,24 @@ func enter() -> void:
 	swimmer.debug_status = "MOVING"
 	swimmer.set_color(Color.CYAN)
 	_repath_attempts = 0
+	_pausing = false
 
 
 func process(delta: float) -> NPCState:
 	var swimmer: Swimmer = npc as Swimmer
 
+	# Handle pause
+	if _pausing:
+		_pause_timer += delta
+		swimmer.debug_status = "PAUSING"
+		if _pause_timer >= _pause_duration:
+			_pausing = false
+		return null
+
 	var result := swimmer.step_movement(delta)
 
 	match result:
 		NPCBase.MoveResult.ARRIVED:
-			# Arrived — start activity at this cell
 			return SwimmerStateActivity.new()
 
 		NPCBase.MoveResult.BLOCKED:
@@ -42,5 +55,12 @@ func process(delta: float) -> NPCState:
 		NPCBase.MoveResult.MOVING:
 			swimmer.debug_status = "MOVING"
 			swimmer.set_color(Color.CYAN)
+
+			# Check for random pause after each step completes
+			if not swimmer._moving and swimmer.has_path():
+				if swimmer.should_pause():
+					_pausing = true
+					_pause_timer = 0.0
+					_pause_duration = swimmer.get_pause_duration()
 
 	return null

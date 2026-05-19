@@ -171,16 +171,56 @@ func find_nearby_cells_of_type(origin: Vector2i, type: GridCell.Type, radius: in
 # -------------------------------------------------------------------
 
 func get_neighbors(cell: GridCell) -> Array[GridCell]:
+	## Returns valid neighbor cells (8 directions).
+	## Diagonals are only allowed if both adjacent cardinal cells are walkable
+	## (prevents corner-cutting through obstacles).
 	var neighbors: Array[GridCell] = []
 	var pos := cell.grid_position
 
-	for dir in [
-		Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1),
-		Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1),
-	]:
-		var neighbor := get_cell(pos + dir)
-		if neighbor != null:
-			neighbors.append(neighbor)
+	# Cardinal directions (always checked)
+	var left := get_cell(pos + Vector2i(-1, 0))
+	var right := get_cell(pos + Vector2i(1, 0))
+	var up := get_cell(pos + Vector2i(0, -1))
+	var down := get_cell(pos + Vector2i(0, 1))
+
+	if left and left.walkable:
+		neighbors.append(left)
+	if right and right.walkable:
+		neighbors.append(right)
+	if up and up.walkable:
+		neighbors.append(up)
+	if down and down.walkable:
+		neighbors.append(down)
+
+	# Diagonals — only if both adjacent cardinals are walkable
+	var left_walkable := left != null and left.walkable
+	var right_walkable := right != null and right.walkable
+	var up_walkable := up != null and up.walkable
+	var down_walkable := down != null and down.walkable
+
+	# Up-Left: requires Up AND Left to be walkable
+	if up_walkable and left_walkable:
+		var diag := get_cell(pos + Vector2i(-1, -1))
+		if diag and diag.walkable:
+			neighbors.append(diag)
+
+	# Up-Right: requires Up AND Right
+	if up_walkable and right_walkable:
+		var diag := get_cell(pos + Vector2i(1, -1))
+		if diag and diag.walkable:
+			neighbors.append(diag)
+
+	# Down-Left: requires Down AND Left
+	if down_walkable and left_walkable:
+		var diag := get_cell(pos + Vector2i(-1, 1))
+		if diag and diag.walkable:
+			neighbors.append(diag)
+
+	# Down-Right: requires Down AND Right
+	if down_walkable and right_walkable:
+		var diag := get_cell(pos + Vector2i(1, 1))
+		if diag and diag.walkable:
+			neighbors.append(diag)
 
 	return neighbors
 

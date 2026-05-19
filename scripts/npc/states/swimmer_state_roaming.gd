@@ -1,8 +1,8 @@
 class_name SwimmerStateRoaming
 extends NPCState
 
-## Roaming activity — moves between cells of the same type.
-## Used for wading and swimming. Looks like they're moving around in the water.
+## Roaming activity — moves between same-type cells.
+## Speed and pauses driven by swimmer profile.
 
 var _timer: float = 0.0
 var _duration: float = 0.0
@@ -11,6 +11,12 @@ var _color: Color = Color.WHITE
 var _cell_type: GridCell.Type = GridCell.Type.INVALID
 var _roam_radius: int = 4
 var _has_roam_path: bool = false
+var _original_speed: float = 0.0
+
+# Pause between roam targets
+var _pausing: bool = false
+var _pause_timer: float = 0.0
+var _pause_duration: float = 0.0
 
 
 func _init(config: Dictionary = {}) -> void:
@@ -28,11 +34,20 @@ func enter() -> void:
 
 	_timer = 0.0
 
+	# Store original speed and apply roam speed
+	_original_speed = swimmer.move_speed
+	swimmer.move_speed = _original_speed * swimmer.profile.roam_speed_mult
+
 	if swimmer.current_cell:
 		_cell_type = swimmer.current_cell.type
 
-	# Start first roam
 	_pick_roam_target(swimmer)
+
+
+func exit() -> void:
+	# Restore original speed
+	var swimmer: Swimmer = npc as Swimmer
+	swimmer.move_speed = _original_speed
 
 
 func process(delta: float) -> NPCState:
@@ -41,11 +56,18 @@ func process(delta: float) -> NPCState:
 	var swimmer: Swimmer = npc as Swimmer
 	swimmer.debug_status = "%s %.1fs" % [_activity_name, _duration - _timer]
 
-	# Check if activity time is up
 	if _timer >= _duration:
 		swimmer.clear_path()
 		swimmer.on_activity_complete()
 		return swimmer.pick_next_state()
+
+	# Handle pause between roam targets
+	if _pausing:
+		_pause_timer += delta
+		if _pause_timer >= _pause_duration:
+			_pausing = false
+			_pick_roam_target(swimmer)
+		return null
 
 	# Handle movement
 	if _has_roam_path:
@@ -53,27 +75,27 @@ func process(delta: float) -> NPCState:
 
 		match result:
 			NPCBase.MoveResult.ARRIVED:
-				# Reached roam point, pick another
-				_pick_roam_target(swimmer)
+				# Pause briefly before picking next target
+				_pausing = true
+				_pause_timer = 0.0
+				_pause_duration = randf_range(0.3, 1.5) * (1.0 - swimmer.profile.fitness * 0.5)
+				_has_roam_path = false
 
 			NPCBase.MoveResult.BLOCKED:
 				swimmer.debug_status = "%s (WAIT)" % _activity_name
 
 			NPCBase.MoveResult.REPATH:
-				# Can't get there, pick a different spot
 				_pick_roam_target(swimmer)
 
 			NPCBase.MoveResult.MOVING:
 				swimmer.set_color(_color)
 	else:
-		# No path — try picking a new target
 		_pick_roam_target(swimmer)
 
 	return null
 
 
 func _pick_roam_target(swimmer: Swimmer) -> void:
-	## Picks a random nearby cell of the same type to roam to.
 	if swimmer.current_cell == null:
 		_has_roam_path = false
 		return
@@ -88,7 +110,6 @@ func _pick_roam_target(swimmer: Swimmer) -> void:
 		_has_roam_path = false
 		return
 
-	# Pick a random candidate
 	var target: GridCell = candidates[randi() % candidates.size()]
 	swimmer.target_cell = target
 
