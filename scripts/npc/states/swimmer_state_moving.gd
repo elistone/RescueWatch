@@ -1,7 +1,7 @@
 class_name SwimmerStateMoving
 extends NPCState
 
-## Follows the current path cell-to-cell.
+## Follows path cell-to-cell. On arrival, asks swimmer what's next.
 
 var _repath_attempts: int = 0
 const MAX_REPATH_ATTEMPTS := 3
@@ -21,6 +21,7 @@ func process(delta: float) -> NPCState:
 
 	match result:
 		NPCBase.MoveResult.ARRIVED:
+			# Arrived — start activity at this cell
 			return SwimmerStateActivity.new()
 
 		NPCBase.MoveResult.BLOCKED:
@@ -29,18 +30,14 @@ func process(delta: float) -> NPCState:
 
 		NPCBase.MoveResult.REPATH:
 			_repath_attempts += 1
-			swimmer.debug_status = "REPATH %d" % _repath_attempts
-
 			if _repath_attempts >= MAX_REPATH_ATTEMPTS:
-				# Give up, leave the beach
-				return SwimmerStateLeaving.new()
+				return swimmer.pick_next_state()
 
-			# Try to recalculate path
 			if swimmer.target_cell and swimmer.request_path_to(swimmer.target_cell):
 				swimmer.set_color(Color.CYAN)
 				swimmer.debug_status = "MOVING"
 			else:
-				return SwimmerStateLeaving.new()
+				return swimmer.pick_next_state()
 
 		NPCBase.MoveResult.MOVING:
 			swimmer.debug_status = "MOVING"

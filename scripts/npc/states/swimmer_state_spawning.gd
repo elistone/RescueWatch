@@ -1,7 +1,7 @@
 class_name SwimmerStateSpawning
 extends NPCState
 
-## Spawns the swimmer at a random entrance cell, then transitions to moving.
+## Spawns at entrance, then asks swimmer what to do.
 
 
 func enter() -> void:
@@ -18,14 +18,4 @@ func enter() -> void:
 
 func process(_delta: float) -> NPCState:
 	var swimmer: Swimmer = npc as Swimmer
-
-	# Pick a destination and transition to moving
-	var destination := swimmer.pick_activity_destination()
-	if destination == null:
-		return SwimmerStateLeaving.new()
-
-	if swimmer.request_path_to(destination):
-		swimmer.target_cell = destination
-		return SwimmerStateMoving.new()
-	else:
-		return SwimmerStateLeaving.new()
+	return swimmer.pick_next_state()
