@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://4hv33do63ugm" path="res://scripts/core/tilemap_bridge.gd" id="2_6q06x"]
 [ext_resource type="PackedScene" uid="uid://20pnlgs12q5d" path="res://scenes/npc/swimmer.tscn" id="2_iuonh"]
 [ext_resource type="Script" uid="uid://b1pqwmthfk7xx" path="res://scripts/systems/swimmer_spawner.gd" id="4_6q06x"]
+[ext_resource type="Script" uid="uid://bdrlaqw1an1r4" path="res://scripts/systems/danger_manager.gd" id="6_hujxm"]
 [ext_resource type="Script" uid="uid://dkcy3oyiljiae" path="res://scenes/main/shift_ui.gd" id="6_ow5a4"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_l3cfh"]
@@ -44,6 +45,9 @@ position = Vector2(640, 360)
 [node name="SwimmerSpawner" type="Node" parent="." unique_id=746094056 groups=["spawner"]]
 script = ExtResource("4_6q06x")
 swimmer_scene = ExtResource("2_iuonh")
+
+[node name="DangerManager" type="Node" parent="." unique_id=1507540015 groups=["danger_manager"]]
+script = ExtResource("6_hujxm")
 
 [node name="ShiftUI" type="Control" parent="." unique_id=1783797292]
 z_index = 5
