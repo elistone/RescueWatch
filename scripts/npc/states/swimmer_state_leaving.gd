@@ -1,7 +1,7 @@
 class_name SwimmerStateLeaving
 extends NPCState
 
-## Paths to entrance and despawns. No follow-up.
+## Paths to entrance and despawns.
 
 var _repath_attempts: int = 0
 const MAX_REPATH_ATTEMPTS := 3
@@ -11,6 +11,12 @@ func enter() -> void:
 	var swimmer: Swimmer = npc as Swimmer
 	swimmer.debug_status = "LEAVING"
 	swimmer.set_color(Color.MEDIUM_PURPLE)
+
+	# Make sure spot is released
+	if swimmer.spot:
+		swimmer.spot.release()
+		swimmer.spot = null
+
 	_request_exit(swimmer)
 
 

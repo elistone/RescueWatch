@@ -1,8 +1,8 @@
 class_name SwimmerStateActivity
 extends NPCState
 
-## Performs a stationary activity (e.g. sunbathing).
-## For water activities, transitions to SwimmerStateRoaming instead.
+## Stationary activity — relaxing at spot, sunbathing, etc.
+## Routes to SwimmerStateRoaming for water activities.
 
 var _timer: float = 0.0
 var _duration: float = 0.0
@@ -11,12 +11,10 @@ var _activity_name: String = ""
 
 func enter() -> void:
 	var swimmer: Swimmer = npc as Swimmer
-	var config := swimmer.get_activity_for_cell(swimmer.current_cell)
 
-	# If this is a roaming activity, switch to roaming state
+	# Check if this should be a roaming activity
+	var config := swimmer.get_activity_for_cell(swimmer.current_cell)
 	if config["roaming"]:
-		# We'll handle this in process() on first frame
-		# Store config so roaming state can read it
 		swimmer.set_meta("pending_roam_config", config)
 		return
 
@@ -30,7 +28,7 @@ func enter() -> void:
 func process(delta: float) -> NPCState:
 	var swimmer: Swimmer = npc as Swimmer
 
-	# Check if we need to redirect to roaming
+	# Redirect to roaming if needed
 	if swimmer.has_meta("pending_roam_config"):
 		var config: Dictionary = swimmer.get_meta("pending_roam_config")
 		swimmer.remove_meta("pending_roam_config")
@@ -41,6 +39,6 @@ func process(delta: float) -> NPCState:
 
 	if _timer >= _duration:
 		swimmer.on_activity_complete()
-		return swimmer.pick_next_state()
+		return swimmer.pick_state_after_rest()
 
 	return null

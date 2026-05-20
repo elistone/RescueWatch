@@ -1,8 +1,8 @@
 class_name SwimmerStateRoaming
 extends NPCState
 
-## Roaming activity — moves between same-type cells.
-## Speed and pauses driven by swimmer profile.
+## Roaming in water — moves between same-type cells until timer expires.
+## On completion, returns to spot.
 
 var _timer: float = 0.0
 var _duration: float = 0.0
@@ -13,7 +13,6 @@ var _roam_radius: int = 4
 var _has_roam_path: bool = false
 var _original_speed: float = 0.0
 
-# Pause between roam targets
 var _pausing: bool = false
 var _pause_timer: float = 0.0
 var _pause_duration: float = 0.0
@@ -33,8 +32,6 @@ func enter() -> void:
 	swimmer.debug_status = _activity_name
 
 	_timer = 0.0
-
-	# Store original speed and apply roam speed
 	_original_speed = swimmer.move_speed
 	swimmer.move_speed = _original_speed * swimmer.profile.roam_speed_mult
 
@@ -45,7 +42,6 @@ func enter() -> void:
 
 
 func exit() -> void:
-	# Restore original speed
 	var swimmer: Swimmer = npc as Swimmer
 	swimmer.move_speed = _original_speed
 
@@ -58,10 +54,9 @@ func process(delta: float) -> NPCState:
 
 	if _timer >= _duration:
 		swimmer.clear_path()
-		swimmer.on_activity_complete()
-		return swimmer.pick_next_state()
+		# Done in water — return to spot
+		return SwimmerStateReturning.new()
 
-	# Handle pause between roam targets
 	if _pausing:
 		_pause_timer += delta
 		if _pause_timer >= _pause_duration:
@@ -69,13 +64,11 @@ func process(delta: float) -> NPCState:
 			_pick_roam_target(swimmer)
 		return null
 
-	# Handle movement
 	if _has_roam_path:
 		var result := swimmer.step_movement(delta)
 
 		match result:
 			NPCBase.MoveResult.ARRIVED:
-				# Pause briefly before picking next target
 				_pausing = true
 				_pause_timer = 0.0
 				_pause_duration = randf_range(0.3, 1.5) * (1.0 - swimmer.profile.fitness * 0.5)

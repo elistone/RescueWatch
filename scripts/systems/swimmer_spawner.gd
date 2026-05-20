@@ -1,48 +1,36 @@
 class_name SwimmerSpawner
 extends Node
 
-## SwimmerSpawner — Spawns swimmers over a shift with a natural bell-curve.
-##
-## Attach to your main scene. Call start_spawning() when shift begins.
-##
-## Distribution: few arrivals early, peak at mid-shift, tapering off at end.
-## Randomized timing so it never feels mechanical.
+## Spawns swimmers in groups over the shift with a bell-curve distribution.
 
 # -------------------------------------------------------------------
 # Configuration
 # -------------------------------------------------------------------
 
-## Total swimmers to spawn this shift.
 @export var total_swimmers: int = 200
-
-## Scene to instantiate.
 @export var swimmer_scene: PackedScene = null
-
-## Parent node to add swimmers to.
 @export var spawn_parent: Node = null
-
-## How many activities each swimmer does before leaving (min, max).
-@export var min_activities: int = 2
-@export var max_activities: int = 5
-
-## Spread of the bell curve (lower = more concentrated at peak).
-## 0.2 = very peaked, 0.4 = moderate spread, 0.6 = fairly even
+@export var min_activities: int = 3
+@export var max_activities: int = 6
 @export var curve_spread: float = 0.35
 
 # -------------------------------------------------------------------
 # State
 # -------------------------------------------------------------------
 
-var _spawn_times: Array[float] = []  # Pre-calculated spawn times (0.0 to 1.0)
+var _spawn_times: Array[float] = []
 var _spawn_index: int = 0
 var _active: bool = false
 var _spawned_count: int = 0
+var _groups: Array[SwimmerGroup] = []
 
 # -------------------------------------------------------------------
 # Lifecycle
 # -------------------------------------------------------------------
 
 func _ready() -> void:
+	add_to_group("spawner")
+
 	if swimmer_scene == null:
 		swimmer_scene = preload("res://scenes/npc/swimmer.tscn")
 
@@ -58,11 +46,10 @@ func _process(_delta: float) -> void:
 		_active = false
 		return
 
-	# Check if it's time to spawn the next swimmer
 	var progress := ShiftManager.get_progress()
 
 	while _spawn_index < _spawn_times.size() and progress >= _spawn_times[_spawn_index]:
-		_do_spawn()
+		_do_spawn_group()
 		_spawn_index += 1
 
 
@@ -74,8 +61,9 @@ func start_spawning() -> void:
 	_generate_spawn_times()
 	_spawn_index = 0
 	_spawned_count = 0
+	_groups.clear()
 	_active = true
-	print("[Spawner] Prepared %d spawn times over shift" % _spawn_times.size())
+	print("[Spawner] Prepared %d group spawns" % _spawn_times.size())
 
 
 func stop_spawning() -> void:
@@ -87,85 +75,95 @@ func get_spawned_count() -> int:
 
 
 func get_remaining_count() -> int:
-	return total_swimmers - _spawned_count
+	return max(0, total_swimmers - _spawned_count)
 
 
 # -------------------------------------------------------------------
-# Spawn Time Generation (Bell Curve)
+# Spawn Time Generation
 # -------------------------------------------------------------------
 
 func _generate_spawn_times() -> void:
-	## Pre-generates all spawn times using a bell curve distribution.
-	## Times are normalized 0.0 to 1.0 (shift progress).
 	_spawn_times.clear()
 
-	for i in range(total_swimmers):
+	# Generate group spawn events (not individual swimmers)
+	# Estimate ~2.5 average group size
+	var estimated_groups := int(ceil(total_swimmers / 2.5))
+	var remaining := total_swimmers
+
+	for i in range(estimated_groups):
+		if remaining <= 0:
+			break
 		var t := _sample_bell_curve()
 		_spawn_times.append(t)
+		remaining -= 2  # Rough estimate, actual size determined at spawn time
 
-	# Sort so we can process in order
 	_spawn_times.sort()
-
-	# Add jitter so consecutive spawns don't feel mechanical
 	_add_jitter()
 
 
 func _sample_bell_curve() -> float:
-	## Samples from a Gaussian-like distribution centered at 0.5.
-	## Uses Box-Muller transform approximation.
-	## Returns value clamped to 0.05 - 0.90 (nobody arrives at very start/end).
-
-	# Box-Muller transform for normal distribution
 	var u1 := randf_range(0.001, 1.0)
 	var u2 := randf_range(0.001, 1.0)
 	var z := sqrt(-2.0 * log(u1)) * cos(TAU * u2)
-
-	# Center at 0.5, apply spread
 	var value := 0.5 + z * curve_spread
-
-	# Clamp — no one arrives in first 5% or last 10% of shift
 	return clampf(value, 0.05, 0.90)
 
 
 func _add_jitter() -> void:
-	## Adds small random offsets so spawns don't cluster unnaturally.
-	var min_gap := 0.002  # Minimum gap between spawns (~0.6s at 300s shift)
+	var min_gap := 0.005
 
 	for i in range(1, _spawn_times.size()):
 		var gap := _spawn_times[i] - _spawn_times[i - 1]
 		if gap < min_gap:
-			_spawn_times[i] = _spawn_times[i - 1] + min_gap + randf_range(0.0, 0.005)
+			_spawn_times[i] = _spawn_times[i - 1] + min_gap + randf_range(0.0, 0.008)
 
-	# Re-clamp after jitter
 	for i in range(_spawn_times.size()):
 		_spawn_times[i] = clampf(_spawn_times[i], 0.05, 0.95)
 
 
 # -------------------------------------------------------------------
-# Spawning
+# Group Spawning
 # -------------------------------------------------------------------
 
-func _do_spawn() -> void:
-	if swimmer_scene == null:
+func _do_spawn_group() -> void:
+	if _spawned_count >= total_swimmers:
 		return
 
 	var parent := spawn_parent if spawn_parent else get_parent()
 	if parent == null:
 		return
 
-	var swimmer: Swimmer = swimmer_scene.instantiate() as Swimmer
-	if swimmer == null:
-		return
+	# Create a group
+	var group := SwimmerGroup.create_random()
+	var group_size := mini(group.get_size(), total_swimmers - _spawned_count)
 
-	# Assign random activity count
-	swimmer.max_activities = randi_range(min_activities, max_activities)
+	# Create swimmers for the group
+	for i in range(group_size):
+		var swimmer: Swimmer = swimmer_scene.instantiate() as Swimmer
+		if swimmer == null:
+			continue
 
-	parent.add_child(swimmer)
-	_spawned_count += 1
+		# Generate profile based on group type
+		swimmer.profile = SwimmerProfile.generate_for_group(group.group_type, i, group_size)
+
+		# Activities based on profile
+		swimmer.max_activities = swimmer.profile.water_trips + randi_range(1, 3)
+
+		# Register with group
+		group.add_member(swimmer)
+		swimmer.group = group
+
+		parent.add_child(swimmer)
+		_spawned_count += 1
+
+	# Find group spots (adjacent beach cells)
+	group.find_group_spots()
+
+	_groups.append(group)
 
 
 # -------------------------------------------------------------------
-# Signal Handlers
+# Signals
 # -------------------------------------------------------------------
 
 func _on_shift_started() -> void:
@@ -174,3 +172,6 @@ func _on_shift_started() -> void:
 
 func _on_shift_ended() -> void:
 	stop_spawning()
+	# Signal all remaining groups to leave
+	for group in _groups:
+		group.signal_group_leave()
