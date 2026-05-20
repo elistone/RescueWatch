@@ -18,9 +18,9 @@ grow_vertical = 2
 [node name="CellInfoLabel" type="Label" parent="CanvasLayer/Control" unique_id=931047941]
 layout_mode = 0
 offset_left = 10.0
-offset_top = 10.0
+offset_top = 15.0
 offset_right = 310.0
-offset_bottom = 160.0
+offset_bottom = 165.0
 text = "Tap a cell for info"
 
 [node name="ToggleGridButton" type="Button" parent="CanvasLayer/Control" unique_id=1014017802]
